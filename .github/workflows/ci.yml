@@ -24,6 +24,8 @@ jobs:
   client:
     name: Client
     runs-on: ubuntu-20.04
+    outputs:
+      deploy: ${{ steps.deploy.outputs.triggered }}
     steps:
       - uses: actions/checkout@v3
 
@@ -33,6 +35,9 @@ jobs:
           echo "1-new" > public/one.txt
 
       - uses: actions/upload-artifact@v3
+        id: deploy
+        # Upload an artifact only for the deployment.
+        if: success() && github.ref == 'refs/heads/main'
         with:
           # The `run_id` does not change on a workflow re-run.
           name: app-public-assets-${{ github.run_id }}
@@ -44,13 +49,14 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - client
-    if: success()
+    if: needs.client.outputs.deploy == 'true'
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Install
         run: |
+          echo ${{ needs.client.outputs.deploy }}
           mkdir public
           echo "1" > public/one.txt
           echo "2" > public/two.txt
