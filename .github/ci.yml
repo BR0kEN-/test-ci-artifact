@@ -1,0 +1,66 @@
+name: Build, Test, Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  client:
+    name: Client
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run
+        run: |
+          mkdir public
+          echo "1-new" > public/one.txt
+
+      - uses: actions/upload-artifact@v3
+        with:
+          # The `run_id` does not change on a workflow re-run.
+          name: app-public-assets-${{ github.run_id }}
+          path: public/
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    runs-on: ubuntu-20.04
+    needs:
+      - client
+    if: success()
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install
+        run: |
+          mkdir public
+          echo "1" > public/one.txt
+          echo "2" > public/two.txt
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: app-public-assets-${{ github.run_id }}
+          path: public/
+
+      - name: Zip
+        run: |
+          ls -lah public/
+          find public -type f -exec cat {} \;
